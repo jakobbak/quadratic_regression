@@ -9,6 +9,7 @@ float meas[][];
 float modl[][];
 float nois[][];
 float regr[][];
+float coef[][];
 float filt[][];
 float diff[];
 float bias;
@@ -22,7 +23,8 @@ void compute_samples() {
   meas = new float[3][num_references];
   modl = new float[6][num_references];
   nois = new float[3][num_references];
-  regr = new float[3][num_references];
+  regr = new float[4][num_references];
+  coef = new float[4][num_references];
   filt = new float[3][num_references];
   diff = new float[num_references];
 
@@ -31,9 +33,25 @@ void compute_samples() {
     compute_measured_sample(i);
     compute_model_sample(i);
     compute_noise_sample(i);
-    compute_filter_sample(i, nois);
-    compute_quadratic_regression(i, regression_samples, nois);
-    compute_diff(i, 1, modl, regr);
+    if(use_measurement) {
+      compute_filter_sample(i, meas);
+      if(use_cubic_regression) {
+        compute_cubic_regression(i, regression_samples, meas);
+      } else {
+      //compute_quadratic_regression(i, regression_samples, nois);
+      compute_alternate_quadratic_regression(i, regression_samples, meas);      
+      }
+      compute_diff(i, 0, meas, regr);      
+    } else {
+      compute_filter_sample(i, nois);
+      if(use_cubic_regression) {
+        compute_cubic_regression(i, regression_samples, nois);
+      } else {
+      //compute_quadratic_regression(i, regression_samples, nois);
+      compute_alternate_quadratic_regression(i, regression_samples, nois);      
+      }
+      compute_diff(i, 0, modl, regr);
+    }
   }
 }
 
@@ -90,7 +108,7 @@ void compute_noise_sample(int i) {
   int pnr = (int)(pn * randomGaussian() / 2 / PI * pow(2, 14));
   //println(pnr);
   nois[0][i] = (float)((pr + pnr)/pow(2, 14)*2*PI);
-  //nois[0][i] = modl[0][i] + pn * randomGaussian();
+  nois[0][i] = modl[0][i] + pn * randomGaussian();
   nois[1][i] = modl[1][i] + vn * randomGaussian();
   nois[2][i] = modl[2][i];;
 }
@@ -136,7 +154,7 @@ void compute_diff(int i, int k, float d1[][], float d2[][]) {
 
 void compute_quadratic_regression(int j, int N_points, float data[][]) {
   int nump = N_points;
-  if(j < nump) nump = j + 1;
+  if(j < nump) return;//nump = j + 1;
   double S00, S10, S20, S30, S40, S01, S11, S21;
   double denom, x, y, a, b, c;
   S00=S10=S20=S30=S40=S01=S11=S21=0;
@@ -179,4 +197,137 @@ void compute_quadratic_regression(int j, int N_points, float data[][]) {
     regr[1][j] *= numpm*numpm;
     regr[0][j] *= numpm*numpm;
   }
+}
+
+void compute_alternate_quadratic_regression(int j, int nump, float data[][]) {
+  if(j < nump) return;
+  double n, x1, x2, x3, x4, y1, xy, x2y;
+  double x, y, a, b, c;
+  
+  int k = j - (nump - 1);
+  x = 0;
+  x1 = 0;
+  x2 = 0;
+  x3 = 0;
+  x4 = 0;
+  y1 = 0;
+  xy = 0;
+  x2y = 0;
+  for (int i=0; i<nump; i++) { 
+    //x = time[i+k];
+    x += dt;
+    y = data[0][i+k];
+    //S00 += 1; // x^0+y^0
+    x1 += x;
+    x2 += x * x;
+    x3 += x * x * x;
+    x4 += x * x * x * x;
+    y1 += y;
+    xy += x * y;
+    x2y+= x * x * y;
+  }
+  n = nump;
+ 
+  double q[][] = {{n, x1, x2},{x1, x2, x3},{x2, x3, x4}};
+  double r[][] = {{y1},{xy},{x2y}};
+  
+  Matrix X = new Matrix(3, 3, q);
+  Matrix Y = new Matrix(3, 1, r);
+  Matrix Xi;
+  try {
+    Xi = Matrix3x3Inversion(X);
+  } catch(NullPointerException e) {
+    println("3x3 Inversion error");
+    return;
+  }
+  Matrix C = MatrixMultiply(Xi, Y, 3, 3, 1);
+  a = C.matrix[2][0];
+  b = C.matrix[1][0];
+  c = C.matrix[0][0];
+  
+  
+  coef[2][j] = (float)a*2.0;
+  coef[1][j] = (float)b;
+  coef[0][j] = (float)c;
+  
+  float t = (float)nump * dt;
+  // a*x^2 + b*x + c = acc/2*t^2 + vel*t + pos
+  regr[2][j] = (float)a * 2.0;
+  regr[1][j] = (float)a * 2.0*t + (float)b;
+  regr[0][j] = (float)a * t*t + (float)b*t + (float)c;
+
+  //printMatrix(C);
+  //exit();
+}
+
+
+void compute_cubic_regression(int j, int nump, float data[][]) {
+  if(j < nump) return;
+  double n, x1, x2, x3, x4, x5, x6;
+  double y1, xy, x2y, x3y;
+  double x, y, a, b, c, d;
+  
+  int k = j - (nump - 1);
+  x = 0;
+  x1 = 0;
+  x2 = 0;
+  x3 = 0;
+  x4 = 0;
+  x5 = 0;
+  x6 = 0;
+  y1 = 0;
+  xy = 0;
+  x2y = 0;
+  x3y = 0;
+  for (int i=0; i<nump; i++) { 
+    //x = time[i+k];
+    x += dt;
+    y = data[0][i+k];
+    //S00 += 1; // x^0+y^0
+    x1 += x;
+    x2 += x * x;
+    x3 += x * x * x;
+    x4 += x * x * x * x;
+    x5 += x * x * x * x * x;
+    x6 += x * x * x * x * x * x;
+    y1 += y;
+    xy += x * y;
+    x2y+= x * x * y;
+    x3y+= x * x * x * y;
+  }
+  n = nump;
+ 
+  double q[][] = {{n, x1, x2, x3},{x1, x2, x3, x4},{x2, x3, x4, x5},{x3, x4, x5, x6}};
+  double r[][] = {{y1},{xy},{x2y},{x3y}};
+  
+  Matrix X = new Matrix(4, 4, q);
+  Matrix Y = new Matrix(4, 1, r);
+  Matrix Xi;
+  try {
+    Xi = Matrix4x4Inversion(X);
+  } catch(NullPointerException e) {
+    println("4x4 Inversion error");
+    return;
+  }
+  Matrix C = MatrixMultiply(Xi, Y, 4, 4, 1);
+  a = C.matrix[3][0];
+  b = C.matrix[2][0];
+  c = C.matrix[1][0];
+  d = C.matrix[0][0];
+  
+  // a*x^3 + b^2*x + c*x + d= jrk/6*t^3 + acc/2*t^2 + vel*t + pos
+  
+  coef[3][j] = (float)a*6.0;
+  coef[2][j] = (float)b*2.0;
+  coef[1][j] = (float)c;
+  coef[0][j] = (float)d;
+  
+  float t = (float)nump * dt;
+  regr[3][j] = (float)(a*6.0);
+  regr[2][j] = (float)(a*6.0*t + b*2.0);
+  regr[1][j] = (float)(a*3.0*t*t + b*2.0*t + c);
+  regr[0][j] = (float)(a*1.0*t*t*t + b*t*t + c*t + d);
+
+  //printMatrix(C);
+  //exit();
 }
