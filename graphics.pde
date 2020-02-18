@@ -1,7 +1,9 @@
 float x1, x2, y0, y1, y2;
-float xwidth, yheight;
+float xwidth, yheight, zoomwidth, zoomheight;
 int xb, xe;
 int num_samples;
+boolean roll_inspection_point;
+boolean mouse_inspection_point;
 
 void set_viewport(int[] viewport) {
   xb = viewport[0];
@@ -32,6 +34,7 @@ void draw_graphs() {
     x2 = x1 + xwidth;
     noFill();
     if(use_measurement) {
+      //draw_data(modl, i, j, 255);
       draw_data(meas, i, j, 255);
       draw_data(filt, i, j, 64);
       draw_data(regr, i, j, 128);
@@ -56,73 +59,154 @@ void draw_graphs() {
       //draw_points(nois, i, 0, 255);
     }
   }  
+  draw_zoom(nois, 64);
 }
 
 
 void draw_diff(int i, int j, int alpha) {
-  y1 = height/2 - diff[i]*posm * yheight * diffm * zoom;
-  y2 = height/2 - diff[j]*posm * yheight * diffm * zoom;
+  y1 = height/2 - diff[i]*posm * yheight * diffm;
+  y2 = height/2 - diff[j]*posm * yheight * diffm;
   stroke(192, 000, 192, alpha);
   line(x1, y1, x2, y2);
 }
 
 void draw_data(float data[][], int i, int j, int alpha) {
-  y1 = height/2 - data[0][i]*posm * yheight * zoom;
-  y2 = height/2 - data[0][j]*posm * yheight * zoom;
+  y1 = height/2 - data[0][i]*posm * yheight;
+  y2 = height/2 - data[0][j]*posm * yheight;
   stroke(255, 000, 000, alpha);
   line(x1, y1, x2, y2);
   
-  y1 = height/2 - data[1][i]*velm * yheight * zoom;
-  y2 = height/2 - data[1][j]*velm * yheight * zoom;
+  y1 = height/2 - data[1][i]*velm * yheight;
+  y2 = height/2 - data[1][j]*velm * yheight;
   stroke(000, 255, 000, alpha);
   line(x1, y1, x2, y2);
   
-  y1 = height/2 - data[2][i]*accm * yheight * zoom;
-  y2 = height/2 - data[2][j]*accm * yheight * zoom;
+  y1 = height/2 - data[2][i]*accm * yheight;
+  y2 = height/2 - data[2][j]*accm * yheight;
   stroke(000, 128, 255, alpha);
   line(x1, y1, x2, y2);  
 }
 
 
 void draw_points(float data[][], int i, int k, int alpha) {
-  y1 = height/2 - data[k][i]*posm * yheight * zoom;
+  y1 = height/2 - data[k][i]*posm * yheight;
   stroke(255, 000, 000, alpha);
   ellipse(x1, y1, 5, 5);
+}
+
+void draw_zoom(float data[][], float alpha) {
+  fill(255, 255, 255, 32);
+  noStroke();
+  rect(0, height/2.0, width/2.0, height/2.0);
+  int ip = inspection_point;
+  int rs = regression_samples;
+  float ymin = zoom[0];
+  float ymax = zoom[1];
+  float yrange = abs(ymax - ymin);
+  if(yrange <= 0.0) yrange = 1.0;
+  float xrange = regression_samples + 1;
+  zoomwidth = width/2.0/xrange;
+  zoomheight = height/2.0/yrange;
+  for(int i = ip-rs; i <= ip; i++) {
+    if(i < 0) continue;
+    float zx = (i-ip+rs) * zoomwidth;
+    float zy = height - (data[0][i] - ymin) * zoomheight;
+    noFill();
+    stroke(255, 000, 000, alpha);
+    ellipse(zx, zy, 5, 5);
+    
+    double a0, v0, p0;
+    a0 = 0;
+    v0 = 0;
+    p0 = 0;
+    try {
+      a0 = coef[2][ip];
+      v0 = coef[1][ip];
+      p0 = coef[0][ip];
+    } catch (ArrayIndexOutOfBoundsException e) {
+    }
+    //int k = i - j + regression_samples;
+    //k = sample - inspection_point + regression_samples
+    
+    double t = (double)(i-ip+rs) * dt;
+    //float acc1 = (float)                     (a0);
+    //float vel1 = (float)              (a0*t + v0);
+    float pos1 = (float) (0.5*a0*t*t + v0*t + p0);
+    t = (double)(i-ip+rs+1) * dt;
+    //float acc2 = (float)                     (a0);
+    //float vel2 = (float)              (a0*t + v0);
+    float pos2 = (float) (0.5*a0*t*t + v0*t + p0);
+  
+    //alpha = (int)max((float)alpha-(float)abs(j-i)*0.5, 0.0);
+    float zx2 = (i-ip+rs+1) * zoomwidth;
+    float zy1 = height - (pos1 - ymin) * zoomheight;
+    float zy2 = height - (pos2 - ymin) * zoomheight;
+    //y1 = height/2 - pos1*posm * yheight;
+    //y2 = height/2 - pos2*posm * yheight;
+    stroke(255, 128, 128, alpha);
+    line(zx, zy1, zx2, zy2);
+    
+  }
 }
 
 
 void draw_curve_from_quadratic_regression_point(int i, int j, int alpha) {
   int k = i - j + regression_samples;
-  float t = (float)(k) * dt;
-  float acc1 =                                                   (float)coef[2][j];
-  float vel1 =                             (float)coef[2][j]*t + (float)coef[1][j];
-  float pos1 = (float)0.5*coef[2][j]*t*t + (float)coef[1][j]*t + (float)coef[0][j];
+  //float t = (float)(k) * dt;
+  //float acc1 =                                                   (float)coef[2][j];
+  //float vel1 =                             (float)coef[2][j]*t + (float)coef[1][j];
+  //float pos1 = (float)0.5*coef[2][j]*t*t + (float)coef[1][j]*t + (float)coef[0][j];
+  //t = (float)(k+1) * dt;
+  //float acc2 =                                                   (float)coef[2][j];
+  //float vel2 =                             (float)coef[2][j]*t + (float)coef[1][j];
+  //float pos2 = (float)0.5*coef[2][j]*t*t + (float)coef[1][j]*t + (float)coef[0][j];
+
+  double a0, v0, p0;
+  a0 = 0;
+  v0 = 0;
+  p0 = 0;
+  try {
+    a0 = coef[2][j];
+    v0 = coef[1][j];
+    p0 = coef[0][j];
+  } catch (ArrayIndexOutOfBoundsException e) {
+    inspection_point = regression_samples;
+  }
+  double t = (double)(k) * dt;
+  float acc1 = (float)                     (a0);
+  float vel1 = (float)              (a0*t + v0);
+  float pos1 = (float) (0.5*a0*t*t + v0*t + p0);
   t = (float)(k+1) * dt;
-  float acc2 =                                                   (float)coef[2][j];
-  float vel2 =                             (float)coef[2][j]*t + (float)coef[1][j];
-  float pos2 = (float)0.5*coef[2][j]*t*t + (float)coef[1][j]*t + (float)coef[0][j];
+  float acc2 = (float)                     (a0);
+  float vel2 = (float)              (a0*t + v0);
+  float pos2 = (float) (0.5*a0*t*t + v0*t + p0);
 
   alpha = (int)max((float)alpha-(float)abs(j-i)*0.5, 0.0);
 
-  y1 = height/2 - pos1*posm * yheight * zoom;
-  y2 = height/2 - pos2*posm * yheight * zoom;
+  y1 = height/2 - pos1*posm * yheight;
+  y2 = height/2 - pos2*posm * yheight;
   stroke(255, 128, 128, alpha);
   line(x1, y1, x2, y2);
   
-  y1 = height/2 - vel1*velm * yheight * zoom;
-  y2 = height/2 - vel2*velm * yheight * zoom;
+  y1 = height/2 - vel1*velm * yheight;
+  y2 = height/2 - vel2*velm * yheight;
   stroke(128, 255, 128, alpha);
   line(x1, y1, x2, y2);
   
-  y1 = height/2 - acc1*accm * yheight * zoom;
-  y2 = height/2 - acc2*accm * yheight * zoom;
+  y1 = height/2 - acc1*accm * yheight;
+  y2 = height/2 - acc2*accm * yheight;
   stroke(64, 128, 255, alpha);
   line(x1, y1, x2, y2);  
   
-  y1 = 0;
-  y2 = height;
-  stroke(255, 255, 255, 64);
   if(i == inspection_point) {
+    y1 = 0;
+    y2 = height;
+    float xback = -regression_samples * xwidth;
+    noStroke();
+    fill(255, 255, 255, 32);
+    rect(x1, y1, xback, y2);
+    noFill();
+    stroke(255, 255, 255, 128);
     line(x1, y1, x1, y2);
   }
 }
@@ -141,6 +225,7 @@ void draw_curve_from_cubic_regression_point(int i, int j, int alpha) {
     v0 = coef[1][j];
     p0 = coef[0][j];
   } catch (ArrayIndexOutOfBoundsException e) {
+    inspection_point = regression_samples;
   }
   double t = (double)(k) * dt;
   float acc1 = (float)                                 (j0*t + a0);
@@ -153,25 +238,30 @@ void draw_curve_from_cubic_regression_point(int i, int j, int alpha) {
 
   alpha = (int)max((float)alpha-(float)abs(j-i)*0.5, 0.0);
 
-  y1 = height/2 - pos1*posm * yheight * zoom;
-  y2 = height/2 - pos2*posm * yheight * zoom;
+  y1 = height/2 - pos1*posm * yheight;
+  y2 = height/2 - pos2*posm * yheight;
   stroke(255, 128, 128, alpha);
   line(x1, y1, x2, y2);
   
-  y1 = height/2 - vel1*velm * yheight * zoom;
-  y2 = height/2 - vel2*velm * yheight * zoom;
+  y1 = height/2 - vel1*velm * yheight;
+  y2 = height/2 - vel2*velm * yheight;
   stroke(128, 255, 128, alpha);
   line(x1, y1, x2, y2);
   
-  y1 = height/2 - acc1*accm * yheight * zoom;
-  y2 = height/2 - acc2*accm * yheight * zoom;
+  y1 = height/2 - acc1*accm * yheight;
+  y2 = height/2 - acc2*accm * yheight;
   stroke(64, 128, 255, alpha);
   line(x1, y1, x2, y2);  
   
-  y1 = 0;
-  y2 = height;
-  stroke(255, 255, 255, 64);
   if(i == inspection_point) {
+    y1 = 0;
+    y2 = height;
+    float xback = -regression_samples * xwidth;
+    noStroke();
+    fill(255, 255, 255, 32);
+    rect(x1, y1, xback, y2);
+    noFill();
+    stroke(255, 255, 255, 128);
     line(x1, y1, x1, y2);
   }
 }
