@@ -20,6 +20,7 @@ float rand[][];
 float nois[][];
 float regr[][];
 float coef[][];
+float rslt[][];
 float filt[][];
 float diff[];
 float zoom[];
@@ -40,6 +41,7 @@ void compute_once() {
   nois = new float[3][num_references];
   regr = new float[4][num_references];
   coef = new float[4][num_references];
+  rslt = new float[4][num_references];
   filt = new float[3][num_references];
   diff = new float[num_references];
   zoom = new float[2];
@@ -66,8 +68,9 @@ void compute_samples() {
       //compute_quadratic_regression(i, regression_samples, nois);
       compute_alternate_quadratic_regression(i, regression_samples, meas);      
       }
-      compute_diff(i, 0, meas, regr);
       compute_zoom(meas);
+      compute_result(i, meas);
+      compute_diff(i, 0, meas, regr);
     } else {
       compute_filter_sample(i, nois);
       if(use_cubic_regression) {
@@ -76,11 +79,11 @@ void compute_samples() {
       //compute_quadratic_regression(i, regression_samples, nois);
       compute_alternate_quadratic_regression(i, regression_samples, nois);      
       }
-      compute_diff(i, 0, modl, regr);
       compute_zoom(nois);
+      compute_result(i, nois);
+      compute_diff(i, 0, modl, regr);
     }
-  }
-  
+  }  
 }
 
 
@@ -312,6 +315,7 @@ void compute_cubic_regression(int j, int nump, float data[][]) {
   
   int k = j - (nump - 1);
   x = 0;
+  //n = 0;
   x1 = 0;
   x2 = 0;
   x3 = 0;
@@ -326,7 +330,7 @@ void compute_cubic_regression(int j, int nump, float data[][]) {
     //x = time[i+k];
     x += dt;
     y = data[0][i+k];
-    //S00 += 1; // x^0+y^0
+    //n  += 1.0; // x^0+y^0
     x1 += x;
     x2 += x * x;
     x3 += x * x * x;
@@ -373,4 +377,23 @@ void compute_cubic_regression(int j, int nump, float data[][]) {
 
   //printMatrix(C);
   //exit();
+}
+
+
+void compute_result(int j, float data[][]) {
+  if(j <= regression_samples ) {
+    rslt[2][j] = data[2][j];
+    rslt[1][j] = data[1][j];
+    rslt[0][j] = data[0][j];
+    return;
+  }
+  double a0 = regr[2][j-1];
+  //double v0 = regr[1][j-1];
+  double v0 = rslt[1][j-1];
+  double p0 = rslt[0][j-1];
+
+  rslt[2][j] = (float)                        (a0);
+  rslt[1][j] = (float)                (a0*dt + v0);
+  rslt[0][j] = (float) (0.5*a0*dt*dt + v0*dt + p0);
+    
 }

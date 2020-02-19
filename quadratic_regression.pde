@@ -10,18 +10,18 @@ int num_references = 0;
 int[] viewport = {0, 1000};
 float dt = 0.00020;
 int inspection_point = 0;
-boolean use_measurement = true;
+boolean use_measurement = false;
 
 //model parameters
 float p0 = 0;
 float v0 = 0;
-float a0 = 200;
+float a0 = 0;//200;
 float j0 = 0;
 float s0 = 0;
 float c0 = 0;
 float tt = 1000 * dt;
-float pt = 1.5*PI/2;
-float vt = 14;
+float pt = PI/2;//1.5*PI/2;//
+float vt = 0;//14;
 float at = 0;
 
 // noise parameters
@@ -37,7 +37,7 @@ float pm = 1.0;
 int average_samples = 0;
 
 // regression parameters
-boolean use_cubic_regression = true;
+boolean use_cubic_regression = false;
 float cubic_multiplier = 2;
 int regression_samples = 64;
 int direction = 0;

@@ -57,6 +57,7 @@ void draw_graphs() {
         draw_curve_from_quadratic_regression_point(i, inspection_point, 255);
       }
       //draw_points(nois, i, 0, 255);
+      draw_data(rslt, i, j, 64);
     }
   }  
   if(use_measurement) {
@@ -120,11 +121,13 @@ void draw_zoom(float data[][], float alpha) {
     stroke(255, 000, 000, alpha);
     ellipse(zx, zy, 5, 5);
     
-    double a0, v0, p0;
+    double j0, a0, v0, p0;
+    j0 = 0;
     a0 = 0;
     v0 = 0;
     p0 = 0;
     try {
+      j0 = coef[3][ip];
       a0 = coef[2][ip];
       v0 = coef[1][ip];
       p0 = coef[0][ip];
@@ -136,11 +139,11 @@ void draw_zoom(float data[][], float alpha) {
     double t = (double)(i) * dt;
     //float acc1 = (float)                     (a0);
     //float vel1 = (float)              (a0*t + v0);
-    float pos1 = (float) (0.5*a0*t*t + v0*t + p0);
+    float pos1 = (float) (1.0/6.0*j0*t*t*t + 0.5*a0*t*t + v0*t + p0);
     t = (double)(i+1) * dt;
     //float acc2 = (float)                     (a0);
     //float vel2 = (float)              (a0*t + v0);
-    float pos2 = (float) (0.5*a0*t*t + v0*t + p0);
+    float pos2 = (float) (1.0/6.0*j0*t*t*t + 0.5*a0*t*t + v0*t + p0);
   
     //alpha = (int)max((float)alpha-(float)abs(j-i)*0.5, 0.0);
     float zx2 = (i+1) * zoomwidth;
@@ -241,7 +244,7 @@ void draw_curve_from_cubic_regression_point(int i, int j, int alpha) {
   float vel2 = (float)                    (0.5*j0*t*t + a0*t + v0);
   float pos2 = (float) (1.0/6.0*j0*t*t*t + 0.5*a0*t*t + v0*t + p0);
 
-  alpha = (int)max((float)alpha-(float)abs(j-i)*0.5, 0.0);
+  alpha = (int)max((float)alpha-(float)abs(j-i)*1.5, 0.0);
 
   y1 = height/2 - pos1*posm * yheight;
   y2 = height/2 - pos2*posm * yheight;
