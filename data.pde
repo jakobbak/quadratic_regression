@@ -65,8 +65,7 @@ void compute_samples() {
       if(use_cubic_regression) {
         compute_cubic_regression(i, regression_samples, meas);
       } else {
-      //compute_quadratic_regression(i, regression_samples, nois);
-      compute_alternate_quadratic_regression(i, regression_samples, meas);      
+        compute_quadratic_regression(i, regression_samples, meas);      
       }
       compute_zoom(meas);
       compute_result(i, meas);
@@ -76,8 +75,7 @@ void compute_samples() {
       if(use_cubic_regression) {
         compute_cubic_regression(i, regression_samples, nois);
       } else {
-      //compute_quadratic_regression(i, regression_samples, nois);
-      compute_alternate_quadratic_regression(i, regression_samples, nois);      
+        compute_quadratic_regression(i, regression_samples, nois);      
       }
       compute_zoom(nois);
       compute_result(i, nois);
@@ -137,7 +135,6 @@ void compute_model_sample(int i) {
 void compute_noise_sample(int i) {
   int pr = (int)(modl[0][i] / 2 / PI * pow(2, 14));
   int pnr = (int)(pn * rand[0][i] / 2 / PI * pow(2, 14));
-  //println(pnr);
   nois[0][i] = (float)((pr + pnr)/pow(2, 14)*2*PI);
   //nois[0][i] = modl[0][i] + pn * rand[0][i];
   nois[1][i] = modl[1][i] + vn * rand[1][i];
@@ -198,54 +195,7 @@ void compute_zoom(float data[][]) {
 }
 
 
-void compute_quadratic_regression(int j, int N_points, float data[][]) {
-  int nump = N_points;
-  if(j < nump) return;//nump = j + 1;
-  double S00, S10, S20, S30, S40, S01, S11, S21;
-  double denom, x, y, a, b, c;
-  S00=S10=S20=S30=S40=S01=S11=S21=0;
-  
-  int k = j - (nump - 1);
-  x = 0;
-  for (int i=0; i<nump; i++) { 
-    //x = time[i+k];
-    x += dt;
-    y = data[0][i+k];
-    //S00 += 1; // x^0+y^0
-    S10 += x;
-    S20 += x * x;
-    S30 += x * x * x;
-    S40 += x * x * x * x;
-    S01 += y;
-    S11 += x * y;
-    S21 += x * x * y;
-  }
-  S00 = nump;
- 
-  denom = S00*(S20*S40-S30*S30)-S10*(S10*S40-S20*S30)+S20*(S10*S30-S20*S20);
-  if(denom == 0.0) {
-    //println("denom = 0.0 at j = " + j);
-    return;
-  }
-
-  c = (S01*(S20*S40-S30*S30)-S11*(S10*S40-S20*S30)+S21*(S10*S30-S20*S20))/denom;
-  b = (S00*(S11*S40-S30*S21)-S10*(S01*S40-S21*S20)+S20*(S01*S30-S11*S20))/denom;
-  a = (S00*(S20*S21-S11*S30)-S10*(S10*S21-S01*S30)+S20*(S10*S11-S01*S20))/denom;
-
-  float t = (float)nump * dt;
-  // a*x^2 + b*x + c = acc/2*t^2 + vel*t + pos
-  regr[2][j] = (float)a * 2.0;
-  regr[1][j] = (float)a * 2.0*t + (float)b;
-  regr[0][j] = (float)a * t*t + (float)b*t + (float)c;
-  if(nump != N_points) {
-    float numpm = (float)nump / (float)N_points;
-    regr[2][j] *= numpm*numpm;
-    regr[1][j] *= numpm*numpm;
-    regr[0][j] *= numpm*numpm;
-  }
-}
-
-void compute_alternate_quadratic_regression(int j, int nump, float data[][]) {
+void compute_quadratic_regression(int j, int nump, float data[][]) {
   if(j < nump) return;
   double n, x1, x2, x3, x4, y1, xy, x2y;
   double x, y, a, b, c;
@@ -301,9 +251,6 @@ void compute_alternate_quadratic_regression(int j, int nump, float data[][]) {
   regr[2][j] = (float)a * 2.0;
   regr[1][j] = (float)a * 2.0*t + (float)b;
   regr[0][j] = (float)a * t*t + (float)b*t + (float)c;
-
-  //printMatrix(C);
-  //exit();
 }
 
 
@@ -374,9 +321,6 @@ void compute_cubic_regression(int j, int nump, float data[][]) {
   regr[2][j] = (float)(a*6.0*t + b*2.0);
   regr[1][j] = (float)(a*3.0*t*t + b*2.0*t + c);
   regr[0][j] = (float)(a*1.0*t*t*t + b*t*t + c*t + d);
-
-  //printMatrix(C);
-  //exit();
 }
 
 
@@ -388,7 +332,6 @@ void compute_result(int j, float data[][]) {
     return;
   }
   double a0 = regr[2][j-1];
-  //double v0 = regr[1][j-1];
   double v0 = rslt[1][j-1];
   double p0 = rslt[0][j-1];
 

@@ -10,18 +10,18 @@ int num_references = 0;
 int[] viewport = {0, 1000};
 float dt = 0.00020;
 int inspection_point = 0;
-boolean use_measurement = false;
+boolean use_measurement = true;
 
 //model parameters
 float p0 = 0;
 float v0 = 0;
-float a0 = 0;//200;
+float a0 = 200;
 float j0 = 0;
 float s0 = 0;
 float c0 = 0;
 float tt = 1000 * dt;
-float pt = PI/2;//1.5*PI/2;//
-float vt = 0;//14;
+float pt = 1.5*PI/2;//PI/2;//
+float vt = 14;
 float at = 0;
 
 // noise parameters
@@ -49,7 +49,6 @@ void setup() {
   pixelDensity(displayDensity());
   compute_once();
   //noLoop();
-  //testMatrixMath();
 }
 
 
@@ -59,15 +58,6 @@ void draw() {
   set_viewport(viewport);
   draw_coordinate_system();
   draw_graphs();
-  //regression_samples += direction;
-  //if(regression_samples < 32) direction = 1;
-  //if(regression_samples > 128) direction = -1;
-  //println(regression_samples);
-  //println(average_samples++);
-  //pm *= 0.99;
-  //println(pm);
-  //println(viewport[0]++);
-  //println(inspection_point++);
   if(roll_inspection_point) {
     inspection_point++;    
   } else {
