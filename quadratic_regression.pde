@@ -1,5 +1,6 @@
 // scaling parameters
 float max_value = PI;//0.02;
+float jrkm = 0.00;//1;
 float accm = 0.01;
 float velm = 0.1;
 float posm = 1.00;
@@ -11,6 +12,7 @@ int[] viewport = {0, 1000};
 float dt = 0.00020;
 int inspection_point = 0;
 boolean use_measurement = true;
+int cnt = 0;
 
 //model parameters
 float p0 = 0;
@@ -19,8 +21,8 @@ float a0 = 200;
 float j0 = 0;
 float s0 = 0;
 float c0 = 0;
-float tt = 1000 * dt;
-float pt = 1.5*PI/2;//PI/2;//
+float tt = 0.2;
+float pt = 1.5*PI/2;//PI;//PI/2;//
 float vt = 14;
 float at = 0;
 
@@ -37,10 +39,11 @@ float pm = 1.0;
 int average_samples = 0;
 
 // regression parameters
-boolean use_cubic_regression = false;
+boolean use_cubic_regression = true;
 float cubic_multiplier = 2;
 int regression_samples = 64;
 int direction = 0;
+float regression_window;
 
 void setup() {
   size(1680, 1050, P2D);
@@ -49,12 +52,14 @@ void setup() {
   pixelDensity(displayDensity());
   compute_once();
   //noLoop();
+  println(nf(dt, 0, 6) + ", " + regression_samples + ", " + nf(regression_window, 0, 3));
 }
 
 
 void draw() {
   background(0);
   compute_samples();
+  viewport[1] = (int)(tt/dt);
   set_viewport(viewport);
   draw_coordinate_system();
   draw_graphs();
@@ -64,7 +69,14 @@ void draw() {
     if(mouse_inspection_point) {
       inspection_point = (int)(mouseX / xwidth);
     }
-  }    
+  }
+  //cnt++;
+  //dt += 0.000001;
+  regression_samples = (int)(round(regression_window / dt));
+  if(cnt > frameRate) {
+    cnt = 0;
+    println(nf(dt, 0, 6) + ", " + regression_samples + ", " + nf(regression_window, 0, 3));
+  }
 }
 
 void keyPressed() {

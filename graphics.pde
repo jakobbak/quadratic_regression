@@ -40,14 +40,14 @@ void draw_graphs() {
       draw_data(regr, i, j, 128);
       draw_diff(i, j, 128);
       draw_curve_from_regression_point(i, inspection_point, 255);
-      draw_data(rslt, i, j, 64);
+      //draw_data(rslt, i, j, 64);
     } else {
       draw_data(modl, i, j, 255);
       draw_data(filt, i, j, 64);
       draw_data(regr, i, j, 128);
       draw_diff(i, j, 128);
       draw_curve_from_regression_point(i, inspection_point, 255);
-      draw_data(rslt, i, j, 64);
+      //draw_data(rslt, i, j, 64);
     }
   }  
   if(use_measurement) {
@@ -80,6 +80,11 @@ void draw_data(float data[][], int i, int j, int alpha) {
   y1 = height/2 - data[2][i]*accm * yheight;
   y2 = height/2 - data[2][j]*accm * yheight;
   stroke(000, 128, 255, alpha);
+  line(x1, y1, x2, y2);  
+
+  y1 = height/2 - data[3][i]*jrkm * yheight;
+  y2 = height/2 - data[3][j]*jrkm * yheight;
+  stroke(255, 255, 128, alpha);
   line(x1, y1, x2, y2);  
 }
 

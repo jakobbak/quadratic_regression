@@ -287,7 +287,7 @@ Matrix Matrix4x4Inversion(Matrix A) {
     println("MATRIX_4x4_INVERSION: determinant is zero. Matrix non-invertable");
     return null;
   } else {
-    //println("MATRIX_3x3_INVERSION determinant is " + determinant);
+    //println("MATRIX_4x4_INVERSION determinant is " + determinant);
   }
   
   double j00 = a12*a23*a31 - a13*a22*a31 + a13*a21*a32 - a11*a23*a32 - a12*a21*a33 + a11*a22*a33;
@@ -381,7 +381,8 @@ void printMatrix(Matrix m) {
     // println();
     for(int i=0; i<size[0]; i++) {
       for(int j=0; j<size[1]; j++) {
-        print("\t" + nf((float)m.matrix[i][j],1,2));
+        //print("\t" + nf((float)m.matrix[i][j],1,2));
+        print("\t" + m.matrix[i][j]);
       }
       println();
     }
