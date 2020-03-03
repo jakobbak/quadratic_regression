@@ -34,7 +34,7 @@ void draw_graphs() {
     x2 = x1 + xwidth;
     noFill();
     if(use_measurement) {
-      draw_data(modl, i, j, 255);
+      //draw_data(modl, i, j, 255);
       draw_data(meas, i, j, 255);
       draw_data(filt, i, j, 64);
       draw_data(regr, i, j, 128);
