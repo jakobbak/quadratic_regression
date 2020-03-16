@@ -27,7 +27,10 @@ float diff[];
 float zoom[];
 float bias;
 
-Matrix Xinv;
+Matrix Xinv_cube;
+Matrix Xinv_quad;
+double xi_cube[][];
+double xi_quad[][];
 
 void compute_once() {
   if (use_cubic_regression) {
@@ -43,7 +46,10 @@ void compute_once() {
   }
   regression_window = regression_samples * dt;
   //check_integer_stability_of_regression_calculation();
-  compute_regression_matrix(int(round(1.0/dt)), regression_samples);
+  xi_cube = new double[3][regression_samples];
+  xi_quad = new double[2][regression_samples];
+  compute_regression_matrix_cubic(int(round(1.0/dt)), regression_samples);
+  compute_regression_matrix_quadratic(int(round(1.0/dt)), regression_samples);
   time = new float[num_references];
   meas = new float[4][num_references];
   modl = new float[6][num_references];
@@ -60,149 +66,6 @@ void compute_once() {
     rand[1][i] = randomGaussian();
     rand[2][i] = randomGaussian();
   }
-}
-
-void check_integer_stability_of_regression_calculation() {
-  for (int i = 0; i < 1024; i++) {
-    long n = i;
-    long n2 = n*n;
-    long n3 = n*n*n;
-    long n4 = n*n*n*n;
-    long n5 = n*n*n*n*n;
-    long n6 = n*n*n*n*n*n;
-    long n7 = n*n*n*n*n*n*n;
-
-    // the equations we are trying to calculate with integer math
-    //T1 = (                                           n2 + n ) /  2 == m1 /  2
-    //T2 = (                                 2*n3 +  3*n2 + n ) /  6 == m2 /  6
-    //T3 = (                           n4 +  2*n3 +    n2     ) /  4 == m3 /  4
-    //T4 = (                 6*n5 + 15*n4 + 10*n3         - n ) / 30 == m4 / 30
-    //T5 = (         2*n6 +  6*n5 +  5*n4         -    n2     ) / 12 == m5 / 12
-    //T6 = ( 6*n7 + 21*n6 + 21*n5         -  7*n3         + n ) / 42 == m6 / 42
-
-    // calculate the numerator
-    long m1 = ( n2 + n );
-    long m2 = ( 2*n3 + 3*n2 + n );
-    long m3 = ( n4 + 2*n3 + n2 );
-    long m4 = ( 6*n5 + 15*n4 + 10*n3 - n );
-    long m5 = ( 2*n6 + 6*n5 +5*n4 - n2 );
-    long m6 = ( 6*n7 + 21*n6 + 21*n5 - 7*n3 + n );
-
-    // check the result of division with denominator as integer if there is a reminder
-    long mod1 = m1 % 2;
-    long mod2 = m2 % 6;
-    long mod3 = m3 % 4;
-    long mod4 = m4 % 30;
-    long mod5 = m5 % 12;
-    long mod6 = m6 % 42;
-
-    println( i + "," + mod1 + "," + mod2 + "," + mod3 + "," + mod4 + "," + mod5 + "," + mod6 + "," + m6);
-    if (mod1 != 0 || mod2 != 0 || mod3 != 0 || mod4 != 0 || mod5 != 0 || mod6 != 0) break;
-  }
-}
-
-
-void compute_regression_matrix(int frequency, int rs) {
-
-  long N  = (long)rs;
-  long N2 = N*N;
-  long N3 = N*N*N;
-  long N4 = N*N*N*N;
-  long N5 = N*N*N*N*N;
-  long N6 = N*N*N*N*N*N;
-
-  double n =  (double)rs;
-  double n2 = n*n;
-  double n3 = n*n*n;
-  double n4 = n*n*n*n;
-  double n5 = n*n*n*n*n;
-  double n6 = n*n*n*n*n*n;
-  double n7 = n*n*n*n*n*n*n;
-  double t1 = (                                           n2 + n ) / 2;
-  double t2 = (                                 2*n3 +  3*n2 + n ) / 6;
-  double t3 = (                           n4 +  2*n3 +    n2     ) / 4;
-  double t4 = (                 6*n5 + 15*n4 + 10*n3         - n ) / 30;
-  double t5 = (         2*n6 +  6*n5 +  5*n4         -    n2     ) / 12;
-  double t6 = ( 6*n7 + 21*n6 + 21*n5         -  7*n3         + n ) / 42;
-
-  double f  = (double)frequency;
-  println("frequency = " + f);
-  double f1 = f;
-  double f2 = f*f;
-  double f3 = f*f*f;
-  double f4 = f*f*f*f;
-  double f5 = f*f*f*f*f;
-  double f6 = f*f*f*f*f*f;
-
-  double x1 = t1 / f1;
-  double x2 = t2 / f2;
-  double x3 = t3 / f3;
-  double x4 = t4 / f4;
-  double x5 = t5 / f5;
-  double x6 = t6 / f6;
-  
-  double q[][] = {{n, x1, x2, x3},{x1, x2, x3, x4},{x2, x3, x4, x5},{x3, x4, x5, x6}};
-
-  Matrix X = new Matrix(4, 4, q);
-  printMatrix(X);  
-  
-  long N00 = 8*(2*N3 + 3*N2 + 7*N + 3);
-  long N11 = 200*(6*N4 + 27*N3 + 42*N2 + 30*N + 11);
-  long N22 = 360*(18*N2 + 35*N + 13);
-  long N33 = 2800;
-  
-  long N01 = -(120*N2 + 120*N + 100);
-  long N02 = 120*(2*N + 1);
-  long N03 = -140;
-  long N12 = -(2700*N2 + 6300*N + 3000);
-  long N13 = 280*(6*N2 + 15*N + 11);
-  long N23 = -4200;
-  
-  long DA  = N*(N3 - 6*N2 + 11*N - 6);
-  long DB  = N*(N6 - 14*N4 + 49*N2 - 36);
-  long DC  = N*(N5 - N4 - 13*N3 + 13*N2 + 36*N - 36);
-  
-  double n00 = (double)N00;
-  double n11 = (double)N11;
-  double n22 = (double)N22;
-  double n33 = (double)N33;
-  
-  double n01 = (double)N01;
-  double n02 = (double)N02;
-  double n03 = (double)N03;
-  double n12 = (double)N12;
-  double n13 = (double)N13;
-  double n23 = (double)N23;
-  
-  double da = (double)DA;
-  double db = (double)DB;
-  double dc = (double)DC;
-  
-  double x00 = n00 / da;
-  double x11 = n11 / db * f2;
-  double x22 = n22 / db * f4;
-  double x33 = n33 / db * f6;
-  
-  double x01 = (n01 * f) / da;
-  double x02 = (n02 * f2) / da;
-  double x03 = (n03 * f3) / da;
-  double x12 = (n12 / dc) * f3;
-  double x13 = (n13 / db) * f4;
-  double x23 = (n23 / dc) * f5;
-  
-  double x10 = x01;
-  double x20 = x02;
-  double x21 = x12;
-  double x30 = x03;
-  double x31 = x13;
-  double x32 = x23;
-  
-  double p[][] = {{x00, x01, x02, x03},{x10, x11, x12, x13},{x20, x21, x22, x23},{x30, x31, x32, x33}};
-
-  Xinv = new Matrix(4, 4, p);
-  printMatrix(Xinv);
-  C = MatrixMultiply(X, Xinv, 4, 4, 4);
-  printMatrix(C);
 }
 
 
@@ -360,45 +223,50 @@ void compute_zoom(float data[][]) {
 
 void compute_quadratic_regression(int j, int nump, float data[][]) {
   if (j < nump) return;
-  double n, x1, x2, x3, x4, y1, xy, x2y;
+  //double n, x1, x2, x3, x4; 
+  double y1, xy, x2y;
   double x, y, a, b, c;
 
   int k = j - (nump - 1);
-  x = 0;
-  x1 = 0;
-  x2 = 0;
-  x3 = 0;
-  x4 = 0;
+  //x = 0;
+  //x1 = 0;
+  //x2 = 0;
+  //x3 = 0;
+  //x4 = 0;
   y1 = 0;
   xy = 0;
   x2y = 0;
   for (int i=0; i<nump; i++) { 
-    x += dt;
+    //x += dt;
+    //y = data[0][i+k];
+    //x1 += x;
+    //x2 += x * x;
+    //x3 += x * x * x;
+    //x4 += x * x * x * x;
+    //y1 += y;
+    //xy += x * y;
+    //x2y+= x * x * y;
     y = data[0][i+k];
-    x1 += x;
-    x2 += x * x;
-    x3 += x * x * x;
-    x4 += x * x * x * x;
-    y1 += y;
-    xy += x * y;
-    x2y+= x * x * y;
+    y1  += y;
+    xy  += y*xi_quad[0][i];
+    x2y += y*xi_quad[1][i];
   }
-  n = nump;
+  //n = nump;
 
-  double q[][] = {{n, x1, x2}, {x1, x2, x3}, {x2, x3, x4}};
+  //double q[][] = {{n, x1, x2}, {x1, x2, x3}, {x2, x3, x4}};
   double r[][] = {{y1}, {xy}, {x2y}};
 
-  Matrix X = new Matrix(3, 3, q);
+  //Matrix X = new Matrix(3, 3, q);
   Matrix Y = new Matrix(3, 1, r);
-  Matrix Xi;
-  try {
-    Xi = Matrix3x3Inversion(X);
-  } 
-  catch(NullPointerException e) {
-    println("3x3 Inversion error");
-    return;
-  }
-  Matrix C = MatrixMultiply(Xi, Y, 3, 3, 1);
+  //Matrix Xi;
+  //try {
+  //  Xi = Matrix3x3Inversion(X);
+  //} 
+  //catch(NullPointerException e) {
+  //  println("3x3 Inversion error");
+  //  return;
+  //}
+  Matrix C = MatrixMultiply(Xinv_quad, Y, 3, 3, 1);
   a = C.matrix[2][0];
   b = C.matrix[1][0];
   c = C.matrix[0][0];
@@ -418,55 +286,62 @@ void compute_quadratic_regression(int j, int nump, float data[][]) {
 
 void compute_cubic_regression(int j, int nump, float data[][]) {
   if (j < nump) return;
-  double n, x1, x2, x3, x4, x5, x6;
+  //double n, x1, x2, x3, x4, x5, x6;
   double y1, xy, x2y, x3y;
   double x, y, a, b, c, d;
 
   int k = j - (nump - 1);
-  x = 0;
-  //n = 0;
-  x1 = 0;
-  x2 = 0;
-  x3 = 0;
-  x4 = 0;
-  x5 = 0;
-  x6 = 0;
+  //x = 0;
+  ////n = 0;
+  //x1 = 0;
+  //x2 = 0;
+  //x3 = 0;
+  //x4 = 0;
+  //x5 = 0;
+  //x6 = 0;
   y1 = 0;
   xy = 0;
   x2y = 0;
   x3y = 0;
   for (int i=0; i<nump; i++) { 
-    //x = time[i+k];
-    x += dt;
+    ////x = time[i+k];
+    //x += dt;
+    //y = data[0][i+k];
+    ////n  += 1.0; // x^0+y^0
+    //x1 += x;
+    //x2 += x * x;
+    //x3 += x * x * x;
+    //x4 += x * x * x * x;
+    //x5 += x * x * x * x * x;
+    //x6 += x * x * x * x * x * x;
+    //y1 += y;
+    //xy += x * y;
+    //x2y+= x * x * y;
+    //x3y+= x * x * x * y;
+    
     y = data[0][i+k];
-    //n  += 1.0; // x^0+y^0
-    x1 += x;
-    x2 += x * x;
-    x3 += x * x * x;
-    x4 += x * x * x * x;
-    x5 += x * x * x * x * x;
-    x6 += x * x * x * x * x * x;
-    y1 += y;
-    xy += x * y;
-    x2y+= x * x * y;
-    x3y+= x * x * x * y;
+    y1  += y;
+    xy  += y*xi_cube[0][i];
+    x2y += y*xi_cube[1][i];
+    x3y += y*xi_cube[2][i];
   }
-  n = nump;
+  //n = nump;
 
-  double q[][] = {{n, x1, x2, x3}, {x1, x2, x3, x4}, {x2, x3, x4, x5}, {x3, x4, x5, x6}};
+  //double q[][] = {{n, x1, x2, x3}, {x1, x2, x3, x4}, {x2, x3, x4, x5}, {x3, x4, x5, x6}};
   double r[][] = {{y1}, {xy}, {x2y}, {x3y}};
 
-  Matrix X = new Matrix(4, 4, q);
+  //Matrix X = new Matrix(4, 4, q);
   Matrix Y = new Matrix(4, 1, r);
-  Matrix Xi;
-  try {
-    Xi = Matrix4x4Inversion(X);
-  } 
-  catch(NullPointerException e) {
-    println("4x4 Inversion error");
-    return;
-  }
-  Matrix C = MatrixMultiply(Xi, Y, 4, 4, 1);
+  //Matrix Xi;
+  //try {
+  //  Xi = Matrix4x4Inversion(X);
+  //} 
+  //catch(NullPointerException e) {
+  //  println("4x4 Inversion error");
+  //  return;
+  //}
+  //Matrix C = MatrixMultiply(Xi, Y, 4, 4, 1);
+  Matrix C = MatrixMultiply(Xinv_cube, Y, 4, 4, 1);
   a = C.matrix[3][0];
   b = C.matrix[2][0];
   c = C.matrix[1][0];
