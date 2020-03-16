@@ -99,13 +99,13 @@ void draw_zoom(float data[][], float alpha) {
   float ymax = zoom[1];
   float yrange = abs(ymax - ymin);
   if(yrange <= 0.1) yrange = 0.1;
-  float xrange = regression_samples + 1;
+  float xrange = rs + 1;
   zoomwidth = width/1.0/xrange;
   zoomheight = height/1.0/yrange;
-  for(int i = 0; i <= rs; i++) {
-    int k = i + ip - rs;
+  for(int j = 0; j <= rs; j++) {
+    int k = j + ip - rs;
     if(k < 0) continue;
-    float zx = i * zoomwidth;
+    float zx = j * zoomwidth;
     float zy = height - (data[0][k] - ymin) * zoomheight;
     noFill();
     stroke(255, 000, 000, alpha);
@@ -123,12 +123,14 @@ void draw_zoom(float data[][], float alpha) {
       p0 = coef[0][ip];
     } catch (ArrayIndexOutOfBoundsException e) {
     }    
-    double t = (double)(i) * dt;
+    //double t = (double)(j) * dt;
+    double t = (double)(j-rs) * dt;
     float pos1 = (float) (1.0/6.0*j0*t*t*t + 0.5*a0*t*t + v0*t + p0);
-    t = (double)(i+1) * dt;
+    //t = (double)(j+1) * dt;
+    t = (double)(j-rs+1) * dt;
     float pos2 = (float) (1.0/6.0*j0*t*t*t + 0.5*a0*t*t + v0*t + p0);
   
-    float zx2 = (i+1) * zoomwidth;
+    float zx2 = (j+1) * zoomwidth;
     float zy1 = height - (pos1 - ymin) * zoomheight;
     float zy2 = height - (pos2 - ymin) * zoomheight;
     stroke(255, 128, 128, alpha);
@@ -138,18 +140,19 @@ void draw_zoom(float data[][], float alpha) {
 }
 
 
-void draw_curve_from_regression_point(int i, int j, int alpha) {
-  int k = i - j + regression_samples;
+void draw_curve_from_regression_point(int j, int ip, int alpha) {
+  //int k = j - ip + regression_samples;
+  int k = j - ip;
   double j0, a0, v0, p0;
   j0 = 0;
   a0 = 0;
   v0 = 0;
   p0 = 0;
   try {
-    j0 = coef[3][j];
-    a0 = coef[2][j];
-    v0 = coef[1][j];
-    p0 = coef[0][j];
+    j0 = coef[3][ip];
+    a0 = coef[2][ip];
+    v0 = coef[1][ip];
+    p0 = coef[0][ip];
   } catch (ArrayIndexOutOfBoundsException e) {
     inspection_point = regression_samples;
   }
@@ -162,7 +165,7 @@ void draw_curve_from_regression_point(int i, int j, int alpha) {
   float vel2 = (float)                    (0.5*j0*t*t + a0*t + v0);
   float pos2 = (float) (1.0/6.0*j0*t*t*t + 0.5*a0*t*t + v0*t + p0);
 
-  alpha = (int)max((float)alpha-(float)abs(j-i)*1.5, 0.0);
+  alpha = (int)max((float)alpha-(float)abs(ip-j)*1.5, 0.0);
 
   y1 = height/2 - pos1*posm * yheight;
   y2 = height/2 - pos2*posm * yheight;
@@ -179,7 +182,7 @@ void draw_curve_from_regression_point(int i, int j, int alpha) {
   stroke(64, 128, 255, alpha);
   line(x1, y1, x2, y2);  
   
-  if(i == inspection_point) {
+  if(j == inspection_point) {
     y1 = 0;
     y2 = height;
     float xback = -regression_samples * xwidth;

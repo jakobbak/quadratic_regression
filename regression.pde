@@ -42,15 +42,17 @@ void check_integer_stability_of_regression_calculation() {
 
 void compute_regression_matrix_quadratic(int frequency, int rs) {
 
-  double f  = (double)frequency;
+  double f  = (double)-frequency; // there is a minus here because we use the samples at t_{-rs} to t_{-1}
   //println("frequency = " + f);
   double f1 = f;
   double f2 = f*f;
   double f3 = f*f*f;
   double f4 = f*f*f*f;
   
-  for(int i=0; i < regression_samples; i++) {
-     int j = i+1;
+  for(int i=0; i < rs; i++) {
+     //int j = i+1;
+     //int j = i-(rs-1);
+     int j = rs-i;
      xi_quad[0][i] = j/f1;
      xi_quad[1][i] = j*j/f2;
   }
@@ -128,7 +130,7 @@ void compute_regression_matrix_quadratic(int frequency, int rs) {
 
 void compute_regression_matrix_cubic(int frequency, int rs) {
 
-  double f  = (double)frequency;
+  double f  = (double)-frequency; // there is a minus here because we use the samples at t_{-rs} to t_{-1}
   println("frequency = " + f);
   double f1 = f;
   double f2 = f*f;
@@ -137,8 +139,9 @@ void compute_regression_matrix_cubic(int frequency, int rs) {
   double f5 = f*f*f*f*f;
   double f6 = f*f*f*f*f*f;
   
-  for(int i=0; i < regression_samples; i++) {
-     int j = i+1;
+  for(int i=0; i < rs; i++) {
+     //int j = i+1;
+     int j = rs-i;
      xi_cube[0][i] = j/f1;
      xi_cube[1][i] = j*j/f2;
      xi_cube[2][i] = j*j*j/f3;

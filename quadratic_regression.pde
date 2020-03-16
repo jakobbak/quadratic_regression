@@ -9,7 +9,7 @@ float diffm = 50.0; // per phase//velm*10;//
 // data set parameters
 int num_references = 0;
 int[] viewport = {0, 1000};
-float dt = 0.00020;
+float dt = 0.000200;
 int inspection_point = 0;
 boolean use_measurement = false;
 int cnt = 0;
@@ -47,7 +47,7 @@ int average_samples = 32;
 // regression parameters
 boolean use_cubic_regression = true;
 float cubic_multiplier = 2;
-int regression_samples = 32;
+int regression_samples = 64;
 int direction = 0;
 float regression_window;
 

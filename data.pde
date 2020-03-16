@@ -221,13 +221,14 @@ void compute_zoom(float data[][]) {
 }
 
 
-void compute_quadratic_regression(int j, int nump, float data[][]) {
-  if (j < nump) return;
+void compute_quadratic_regression(int j, int rs, float data[][]) {
+  if (j < rs) return;
   //double n, x1, x2, x3, x4; 
   double y1, xy, x2y;
   double x, y, a, b, c;
 
-  int k = j - (nump - 1);
+  //int k = j - (rs - 1);
+  int k = j - rs;
   //x = 0;
   //x1 = 0;
   //x2 = 0;
@@ -236,7 +237,7 @@ void compute_quadratic_regression(int j, int nump, float data[][]) {
   y1 = 0;
   xy = 0;
   x2y = 0;
-  for (int i=0; i<nump; i++) { 
+  for (int i=0; i<rs; i++) { 
     //x += dt;
     //y = data[0][i+k];
     //x1 += x;
@@ -251,7 +252,7 @@ void compute_quadratic_regression(int j, int nump, float data[][]) {
     xy  += y*xi_quad[0][i];
     x2y += y*xi_quad[1][i];
   }
-  //n = nump;
+  //n = rs;
 
   //double q[][] = {{n, x1, x2}, {x1, x2, x3}, {x2, x3, x4}};
   double r[][] = {{y1}, {xy}, {x2y}};
@@ -276,21 +277,25 @@ void compute_quadratic_regression(int j, int nump, float data[][]) {
   coef[1][j] = (float)b;
   coef[0][j] = (float)c;
 
-  float t = (float)nump * dt;
-  // a*x^2 + b*x + c = acc/2*t^2 + vel*t + pos
+  //float t = (float)rs * dt;
+  //// a*x^2 + b*x + c = acc/2*t^2 + vel*t + pos
+  //regr[2][j] = (float)a * 2.0;
+  //regr[1][j] = (float)a * 2.0*t + (float)b;
+  //regr[0][j] = (float)a * t*t + (float)b*t + (float)c;
   regr[2][j] = (float)a * 2.0;
-  regr[1][j] = (float)a * 2.0*t + (float)b;
-  regr[0][j] = (float)a * t*t + (float)b*t + (float)c;
+  regr[1][j] = (float)b;
+  regr[0][j] = (float)c;
 }
 
 
-void compute_cubic_regression(int j, int nump, float data[][]) {
-  if (j < nump) return;
+void compute_cubic_regression(int j, int rs, float data[][]) {
+  if (j < rs) return;
   //double n, x1, x2, x3, x4, x5, x6;
   double y1, xy, x2y, x3y;
   double x, y, a, b, c, d;
 
-  int k = j - (nump - 1);
+  //int k = j - (nump - 1);
+  int k = j - rs;
   //x = 0;
   ////n = 0;
   //x1 = 0;
@@ -303,7 +308,7 @@ void compute_cubic_regression(int j, int nump, float data[][]) {
   xy = 0;
   x2y = 0;
   x3y = 0;
-  for (int i=0; i<nump; i++) { 
+  for (int i=0; i<rs; i++) { 
     ////x = time[i+k];
     //x += dt;
     //y = data[0][i+k];
@@ -354,11 +359,15 @@ void compute_cubic_regression(int j, int nump, float data[][]) {
   coef[1][j] = (float)c;
   coef[0][j] = (float)d;
 
-  float t = (float)nump * dt;
+  //float t = (float)rs * dt;
+  //regr[3][j] = (float)(a*6.0);
+  //regr[2][j] = (float)(a*6.0*t + b*2.0);
+  //regr[1][j] = (float)(a*3.0*t*t + b*2.0*t + c);
+  //regr[0][j] = (float)(a*1.0*t*t*t + b*t*t + c*t + d);
   regr[3][j] = (float)(a*6.0);
-  regr[2][j] = (float)(a*6.0*t + b*2.0);
-  regr[1][j] = (float)(a*3.0*t*t + b*2.0*t + c);
-  regr[0][j] = (float)(a*1.0*t*t*t + b*t*t + c*t + d);
+  regr[2][j] = (float)(b*2.0);
+  regr[1][j] = (float)(c);
+  regr[0][j] = (float)(d);
 }
 
 
